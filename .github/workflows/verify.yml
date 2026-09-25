@@ -1,0 +1,48 @@
+# The three suites that need no browser, no DSH install and no credentials.
+#
+# The two browser suites (verify-ui, verify-footer) are deliberately absent: they
+# need a running GUI, a signed gate cookie, and a real Chrome, none of which a
+# clean CI runner has. They stay a local acceptance step.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  suites:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22', '24']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Plugin manifest is valid
+        run: node -e "const p=require('./package.json'); if(!p.dsh?.bundle?.patch) throw new Error('missing dsh.bundle.patch'); if(p.dsh?.client?.platform!=='web') throw new Error('missing dsh.client.platform'); console.log('manifest ok');"
+
+      - name: Every file parses
+        run: |
+          for f in lib/*.js tools/*.mjs; do
+            node --check "$f" || exit 1
+          done
+          echo "all files parse"
+
+      - name: Host unit suite
+        # Needs a session tree to inventory. The suite builds its own fixtures
+        # when DSH_SESSIONS_DIR does not exist.
+        run: node tools/verify-host.mjs "${DSH_SESSIONS_DIR:-$RUNNER_TEMP/sessions}"
+
+      - name: HTTP integration suite
+        run: node tools/verify-http.mjs
+
+      - name: Client bundle suite
+        run: node tools/verify-client.mjs

@@ -1,0 +1,16 @@
+# dsh-session-deleter bundle patch: mount the session deleter.
+#
+# Applied when this bundle appears in a profile's dsh.profile.bundles list.
+# The host half (package root) owns the HTTP routes and every filesystem
+# operation; the browser half is discovered automatically through the package's
+# `dsh.client` declaration plus `exports["./client"]`.
+#
+# Host settings are intentionally left to the plugin's own defaults, which the
+# Config schema documents: the harness home comes from `$DSH_HOME` (falling back
+# to `~/.dsh`), sessions live in `<home>/sessions`, and deletions land in
+# `<home>/session-trash/sessions`. Override any of them by adding a `config:`
+# block to this row.
+
+- insert:
+    - id: session-deleter
+      name: 'dsh-session-deleter'

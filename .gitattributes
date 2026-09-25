@@ -1,0 +1,22 @@
+# Normalize line endings in the repository: store LF, check out LF for source.
+# Without this, a Windows working copy rewrites every file to CRLF, which makes
+# diffs noisy and breaks the shell scripts that expect LF.
+* text=auto eol=lf
+
+# Windows-specific scripts still check out with CRLF so PowerShell and cmd are
+# happy when someone opens them in a Windows editor.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary artifacts must never be normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.zst binary
+*.zstd binary
+*.woff binary
+*.woff2 binary

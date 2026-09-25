@@ -1,0 +1,27 @@
+# Dependencies (the plugin itself has none; the tools resolve puppeteer-core
+# from the DSH profile at run time).
+node_modules/
+
+# Restart transcripts and logs produced by tools/restart-*.ps1
+tools/restart-log.txt
+*.log
+
+# Screenshots written by the browser suites
+shots/
+
+# Local environment / editor state
+.env
+.env.*
+*.local
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Credentials must never be committed: the GUI gate cookie is a bearer token.
+*.credentials.yaml
+
+# The maintainer's working ledger. It records this machine's absolute paths,
+# internal session ids, and restart PIDs, so it stays out of the published tree
+# while remaining on disk for the person working on the plugin.
+MEMORY.md
