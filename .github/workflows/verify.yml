@@ -46,3 +46,8 @@ jobs:
 
       - name: Client bundle suite
         run: node tools/verify-client.mjs
+
+      - name: Locale dictionaries agree
+        # Pure static analysis: catches a t("...") call whose key is missing from
+        # one dictionary (the UI would render the raw key) and duplicate keys.
+        run: node tools/check-locale.mjs

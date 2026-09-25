@@ -6,14 +6,16 @@
 // rendering, a menu row that never appears, a settings page that mounts empty.
 import { readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { puppeteerCorePath as PUPPETEER_CORE_PATH, chromePath as CHROME_PATH, baseUrl as BASE_URL, shotsDir as SHOTS_DIR, cookiePair } from './harness.mjs';
+import { puppeteerCorePath as PUPPETEER_CORE_PATH, chromePath as CHROME_PATH, baseUrl as BASE_URL, shotsDir as SHOTS_DIR, cookieForBaseUrl } from './harness.mjs';
 
 const ORIGIN = BASE_URL();
 const SHOT_DIR = process.argv[2] ?? SHOTS_DIR();
 
-const credentials = cookiePair();
+// Environment overrides win; otherwise the cookie is minted in memory from this
+// Harness home's credential file. Nothing is printed or persisted.
+const credentials = await cookieForBaseUrl();
 if (credentials === null) {
-  console.error('set DSH_COOKIE_NAME and DSH_COOKIE_VALUE');
+  console.error('no GUI cookie: set DSH_COOKIE_NAME and DSH_COOKIE_VALUE, or point DSH_HOME at a Harness home');
   process.exit(2);
 }
 const { name: COOKIE_NAME, value: COOKIE_VALUE } = credentials;

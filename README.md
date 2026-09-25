@@ -34,12 +34,22 @@ Three operations, reachable from the UI:
 | A Session's "..." menu | `sidebar.workspaces.session.menu.item` | `order: 500`, after the shipped pin/rename/fork/archive rows |
 | Confirmation dialog | `shell.overlay` | frame-wide floating layer |
 | Management page | `settings.section` | `order: 50` in Settings |
+| Management page (same body) | `shell.overlay` | `order: 5` — the in-plugin manage overlay, see below |
 
 The sidebar-foot entry is the primary door and it does not depend on hover:
 DSH only draws a Session row's "..." trigger while the pointer is over a
 *non-current* row, so a reader who never hovers sees no sign the plugin exists.
 The picker it opens lists every deletable session itself, and a running or
 current session is shown but not deletable.
+
+The management page renders in two places from one component. The shell owns the
+Settings panel and exposes **no client service** that opens it: `layout.selectPanel(id)`
+only addresses a main panel registered in the `sidebar.panellist` slot (whose
+shipped occupants are `plugins` and `dsh-market`), and selecting an unregistered
+key throws. So the in-plugin entries that promise "manage" — the picker's
+「管理回收站」 and the dialog's 「打开管理页」 — open the manage overlay, which
+renders the same body. A best-effort `selectPanel("settings")` is still attempted
+first, purely as a courtesy for a build where that key does exist.
 
 Both dialogs are dry runs first: the plan shows the directory, the size, the log
 generations, what else is affected, and what residue stays behind — before
@@ -115,8 +125,10 @@ session tree — no mocks of the plugin's own logic.
 node tools/verify-host.mjs "$DSH_HOME/sessions"
 node tools/verify-http.mjs
 node tools/verify-client.mjs
+node tools/check-locale.mjs     # static: t() keys vs both dictionaries
 node tools/verify-frames.mjs <log> [<log> …]
-node tools/verify-ui.mjs       # needs a browser + the gate cookie, see below
+node tools/verify-manage.mjs   # needs a browser + the gate cookie, see below
+node tools/verify-ui.mjs       # same
 node tools/verify-footer.mjs   # same
 ```
 
@@ -126,9 +138,13 @@ replacement backups, ledger durability, byte-exact frame round trips, and
 traversal-shaped id rejection. `verify-http` mounts the plugin through a
 `webServer` stub matching the shipped contract and drives all eight routes over
 real HTTP. `verify-client` executes the browser bundle in a VM against a stub
-module loader and asserts every slot registration. `verify-ui` and
-`verify-footer` drive the real GUI in Chrome and prove the surfaces render, not
-merely register.
+module loader and asserts every slot registration. `check-locale` proves every
+`t("…")` call resolves in both dictionaries (a missing key renders as the literal
+key text) and that no key is shadowed by a duplicate. `verify-manage`,
+`verify-ui`, and `verify-footer` drive the real GUI in Chrome and prove the
+surfaces render, not merely register: `verify-manage` opens the picker from the
+sidebar foot, clicks 「管理回收站」, and asserts the management view's rendered
+counts equal what the routes return — an empty-but-mounted panel cannot pass.
 
 Nothing machine-specific is committed. `tools/harness.mjs` discovers the browser
 and `puppeteer-core` at run time, so the suites work on another machine; each
@@ -137,16 +153,23 @@ value has an override:
 | Variable | Purpose |
 | --- | --- |
 | `DSH_URL` | GUI origin under test (default `http://127.0.0.1:3080`) |
-| `DSH_COOKIE_NAME` / `DSH_COOKIE_VALUE` | The GUI gate cookie; required only by the two browser suites |
+| `DSH_COOKIE_NAME` / `DSH_COOKIE_VALUE` | The GUI gate cookie; overrides in-memory minting in the browser suites |
+| `DSH_HOME` | Harness home whose credential file the cookie is minted from |
 | `DSH_CHROME` | Chrome/Chromium binary |
 | `DSH_PUPPETEER_CORE` | `puppeteer-core` entry module |
 | `DSH_SHOTS_DIR` | Where screenshots land |
 | `DSH_SESSIONS_DIR` | Source tree `verify-http` copies its fixture sessions from |
 | `DSH_LAUNCHER` / `DSH_PLUGIN_DIR` | Used by `tools/restart-and-verify.ps1` |
 
-The gate cookie is a bearer credential and is read from the environment only —
-never stored in this repository. `tools/restart-and-verify.ps1` skips its
-authenticated steps when the cookie is absent.
+The gate cookie is a bearer credential and is never written to this repository.
+When `DSH_COOKIE_NAME`/`DSH_COOKIE_VALUE` are absent, `cookieForBaseUrl()` in
+`tools/harness.mjs` mints one **in memory** from this Harness home's own
+`.credentials.yaml` (`client-connection/browser-session`), signing it exactly as
+`dsh-client-connection` does — payload `{version, authority, issuedAt, expiresAt}`
+in milliseconds, HMAC-SHA256 over the base64url body with the **decoded 32-byte**
+secret, and the name `dsh-auth-<base64url sha256(authority)>`. Nothing is printed
+or persisted. The environment variables still win when set, so a run against a
+remote host needs no local credential file.
 
 ## Uninstalling
 

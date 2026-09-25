@@ -1,4 +1,6 @@
-import { puppeteerCorePath as PUPPETEER_CORE_PATH, chromePath as CHROME_PATH, baseUrl as BASE_URL, shotsDir as SHOTS_DIR, cookiePair } from './harness.mjs';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { puppeteerCorePath as PUPPETEER_CORE_PATH, chromePath as CHROME_PATH, baseUrl as BASE_URL, shotsDir as SHOTS_DIR, cookieForBaseUrl } from './harness.mjs';
 // Verify the persistent entry actually renders and works, in a real browser.
 //
 // This is the check that matters: the previous entry (a hover-only menu row) was
@@ -16,11 +18,19 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(`pageerror: ${e.message.slice(0, 200)}`));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(`console: ${m.text().slice(0, 200)}`); });
 
-await browser.setCookie({
-  name: process.env.DSH_COOKIE_NAME, value: process.env.DSH_COOKIE_VALUE,
-  domain: '127.0.0.1', path: '/', httpOnly: true, sameSite: 'Strict',
-});
+// Environment overrides win; otherwise the cookie is minted in memory from this
+// Harness home's credential file. Nothing is printed or persisted.
+const credentials = await cookieForBaseUrl();
+if (credentials === null) {
+  console.error('no GUI cookie: set DSH_COOKIE_NAME and DSH_COOKIE_VALUE, or point DSH_HOME at a Harness home');
+  await browser.close();
+  process.exit(2);
+}
+await page.setCookie({ name: credentials.name, value: credentials.value, url: BASE_URL() });
 await page.setCacheEnabled(false);
+// Screenshots go to the configured shots directory, not a hardcoded path.
+const SHOT_DIR = SHOTS_DIR();
+mkdirSync(SHOT_DIR, { recursive: true });
 await page.goto(BASE_URL(), { waitUntil: 'networkidle2', timeout: 60_000 });
 await new Promise((r) => setTimeout(r, 6000));
 
@@ -73,7 +83,7 @@ if (box === null) {
         .some((b) => /管理回收站|Manage the recycle bin/.test(b.textContent ?? '')),
     };
   }, null, 2)));
-  await page.screenshot({ path: `${process.env.TEMP}\\dshsd-shots\\20-picker-open.png` });
+  await page.screenshot({ path: join(SHOT_DIR, '20-picker-open.png') });
 }
 
 console.log('\n=== 3. the picker row leads into the real delete plan ===');
@@ -92,7 +102,7 @@ console.log(JSON.stringify(await page.evaluate(async () => {
     namesTrash: /回收站|recycle/i.test(text),
   };
 }, null, 2)));
-await page.screenshot({ path: `${process.env.TEMP}\\dshsd-shots\\21-picker-plan.png` });
+await page.screenshot({ path: join(SHOT_DIR, '21-picker-plan.png') });
 
 console.log('\n=== 4. the settings page still works ===');
 console.log(JSON.stringify(await page.evaluate(async () => {

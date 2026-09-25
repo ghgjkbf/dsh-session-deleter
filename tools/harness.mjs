@@ -109,3 +109,58 @@ export function cookiePair() {
   if (!name || !value) return null;
   return { name, value };
 }
+
+/**
+ * The GUI gate cookie for the base URL, minted in memory from this Harness
+ * home's own credential file when the environment carries none.
+ *
+ * Why this exists: every GUI-driving suite needs the authority-bound signed
+ * cookie, and manually exporting a bearer credential per shell is both tedious
+ * and easy to get wrong (the value is long and expires). The cookie is minted
+ * exactly as `dsh-client-connection` does it:
+ *
+ *   - payload `{ version: 1, authority, issuedAt, expiresAt }`, ms integers
+ *   - value   `v1.<base64url(json)>.<base64url(hmacSha256(secret, body))>`
+ *   - the HMAC key is the base64url-DECODED secret (32 raw bytes), not the text
+ *   - cookie name `dsh-auth-` + base64url(sha256(authority)), where authority is
+ *     the request Host (`host:port`), matching `cookieName(requestAuthority())`
+ *
+ * Only this machine's local credential file is read, and nothing is printed or
+ * written. `DSH_COOKIE_NAME`/`DSH_COOKIE_VALUE` still win when present, so a CI
+ * run against another host keeps working without any file access.
+ *
+ * @returns `{ name, value }`, or null when no secret is available.
+ */
+export async function cookieForBaseUrl() {
+  const fromEnv = cookiePair();
+  if (fromEnv) return fromEnv;
+
+  const { readFileSync } = await import('node:fs');
+  const { createHash, createHmac } = await import('node:crypto');
+  const home = process.env.DSH_HOME ?? join(homedir(), '.dsh');
+  let raw;
+  try {
+    raw = readFileSync(join(home, '.credentials.yaml'), 'utf8');
+  } catch {
+    return null;
+  }
+
+  // Read the secret from the browser-session record specifically: the file also
+  // holds unrelated API keys, and only this record's secret signs the cookie.
+  const at = raw.indexOf('client-connection/browser-session');
+  if (at === -1) return null;
+  const secretB64 = raw.slice(at).match(/secret:\s*(\S+)/)?.[1];
+  if (!secretB64) return null;
+
+  const secret = Buffer.from(secretB64, 'base64url');
+  if (secret.length !== 32) return null;
+
+  const authority = new URL(baseUrl()).host;
+  const now = Date.now();
+  const body = Buffer.from(
+    JSON.stringify({ version: 1, authority, issuedAt: now, expiresAt: now + 86_400_000 }),
+    'utf8',
+  ).toString('base64url');
+  const value = `v1.${body}.${createHmac('sha256', secret).update(body).digest('base64url')}`;
+  return { name: 'dsh-auth-' + createHash('sha256').update(authority).digest('base64url'), value };
+}

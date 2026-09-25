@@ -200,9 +200,15 @@ check('it declares the package locale namespace', menuRow && menuRow.options.loc
 
 console.log('\n=== 5. the confirmation dialog and settings page ===');
 const overlays = byId('shell.overlay');
-check('exactly two overlays registered (dialog + picker)', overlays.length === 2, String(overlays.length));
+// Three overlays: the confirmation dialog, the session picker, and the manage
+// view. The manage overlay exists because the shell exposes no client service to
+// open its own settings panel from a third-party plugin, so the entries that
+// promise management render the same body in this overlay instead of doing
+// nothing (see trySelectSettingsPanel in lib/client.js).
+check('exactly three overlays registered (dialog + picker + manage)', overlays.length === 3, String(overlays.length));
 check('the dialog overlay id is namespaced', overlays.some((o) => o.id === 'session-deleter.dialog'), overlays.map((o) => o.id).join(', '));
 check('the picker overlay id is namespaced', overlays.some((o) => o.id === 'session-deleter.picker'), overlays.map((o) => o.id).join(', '));
+check('the manage overlay id is namespaced', overlays.some((o) => o.id === 'session-deleter.manage'), overlays.map((o) => o.id).join(', '));
 
 const sections = byId('settings.section');
 check('exactly one settings section registered', sections.length === 1);
@@ -217,8 +223,9 @@ check('the footer id is namespaced', footerActions[0] && footerActions[0].id ===
 console.log('\n=== 6. no surface collides with another ===');
 const keys = registrations.map((r) => `${r.name}#${r.id}`);
 check('all registration keys are distinct', new Set(keys).size === keys.length, keys.join(', '));
-// Five surfaces: menu row, dialog overlay, picker overlay, footer entry, settings page.
-check('exactly five surfaces were registered', registrations.length === 5, String(registrations.length));
+// Six surfaces: menu row, dialog overlay, picker overlay, manage overlay,
+// footer entry, settings page.
+check('exactly six surfaces were registered', registrations.length === 6, String(registrations.length));
 
 console.log('\n=== 7. components are renderable functions ===');
 for (const record of registrations) {
