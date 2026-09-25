@@ -8,10 +8,15 @@
 // handler answers a real request with the documented JSON shape.
 import { createServer } from 'node:http';
 import { mkdtemp, mkdir, readFile, rm, writeFile, cp } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { tmpdir, homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import * as plugin from '../lib/index.js';
+
+/** This repository's root, for reading the manifest the plugin ships with. */
+const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 // Source tree the sandbox copies its fixture sessions from. Override with
 // DSH_SESSIONS_DIR; when it does not exist the suite builds its own fixtures.
@@ -122,6 +127,11 @@ check('GET /health returns 200', health.status === 200, String(health.status));
 check('GET /health is ok', health.body.ok === true);
 check('GET /health reports the session root', health.body.sessionRoot === sessionRoot, health.body.sessionRoot);
 check('GET /health reports the trash root', health.body.trashRoot === trashRoot, health.body.trashRoot);
+// The version is stated twice — package.json and the /health payload — so assert
+// they agree. A release that bumps one and forgets the other would ship a
+// plugin that misreports itself.
+const manifest = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'package.json'), 'utf8'));
+check('GET /health reports the package version', health.body.version === manifest.version, `${health.body.version} vs package.json ${manifest.version}`);
 
 // inventory
 const inventory = await call('/session-deleter/inventory');

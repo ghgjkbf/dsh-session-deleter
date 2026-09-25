@@ -5,6 +5,8 @@ a Session's contents — from the DSH web UI. Deletion is a **move to a private
 recycle bin**; bytes leave the disk only on an explicit, separately confirmed
 permanent delete.
 
+Release history: [CHANGELOG.md](./CHANGELOG.md).
+
 ## Why this exists
 
 `@deepseek-ai/dsh-session-persistence-jsonl` offers `create`/`open`/`flush`/
