@@ -26,7 +26,7 @@ let failures = 0;
 const check = (label, condition, detail = '') => {
   const mark = condition ? 'PASS' : 'FAIL';
   if (!condition) failures++;
-  console.log(`  [${mark}] ${label}${detail ? ` — ${detail}` : ''}`);
+  console.log(`  [${mark}] ${label}${detail ? ` 鈥?${detail}` : ''}`);
 };
 
 console.log('=== 1. cordis plugin export shape ===');
@@ -88,7 +88,7 @@ const expected = ['/session-deleter/health', '/session-deleter/inventory', '/ses
   '/session-deleter/delete', '/session-deleter/trash', '/session-deleter/restore',
   '/session-deleter/purge', '/session-deleter/ledger'];
 for (const path of expected) check(`registered ${path}`, registered.has(path));
-check('registered exactly 8 routes', registered.size === 8, String(registered.size));
+check('registered exactly 13 routes', registered.size === 13, String(registered.size));
 check('declared one effect', effects.length === 1, effects.join(' | '));
 
 // ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ check('GET /health returns 200', health.status === 200, String(health.status));
 check('GET /health is ok', health.body.ok === true);
 check('GET /health reports the session root', health.body.sessionRoot === sessionRoot, health.body.sessionRoot);
 check('GET /health reports the trash root', health.body.trashRoot === trashRoot, health.body.trashRoot);
-// The version is stated twice — package.json and the /health payload — so assert
+// The version is stated twice 鈥?package.json and the /health payload 鈥?so assert
 // they agree. A release that bumps one and forgets the other would ship a
 // plugin that misreports itself.
 const manifest = JSON.parse(readFileSync(join(PLUGIN_ROOT, 'package.json'), 'utf8'));
@@ -247,10 +247,10 @@ const ctx2 = {
   }),
 };
 plugin.apply(ctx2, { sessionRoot, trashRoot });
-check('a reload registers all 8 routes again', reloaded.size === 8, String(reloaded.size));
+check('a reload registers all 13 routes again', reloaded.size === 13, String(reloaded.size));
 for (const disposer of captured) if (typeof disposer === 'function') disposer();
 check('teardown emptied the reloaded route table', reloaded.size === 0, String(reloaded.size));
-check('the first mount is still registered', registered.size === 8, String(registered.size));
+check('the first mount is still registered', registered.size === 13, String(registered.size));
 
 server.close();
 await rm(sandbox, { recursive: true, force: true });

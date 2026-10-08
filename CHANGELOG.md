@@ -5,6 +5,56 @@ a behavior change or bug fix bumps the patch, a new surface or config field bump
 the minor, and anything that breaks an existing config or on-disk layout bumps
 the major.
 
+## 0.2.0
+
+Message-level deletion: the line A / line B pair from the project plan, with
+their honest visibility boundaries.
+
+### Added
+
+- **Shadow (line A, reversible).** `POST /session-deleter/messages/shadow`
+  appends one `developer/message` tombstone with empty content whose
+  `surfaceOp: {op: "replace", startSeq, endSeq}` shadows one live surface
+  node. The shipped backend's own fold (`foldSurface`) then shadows the
+  target, and `deriveEventMessage` derives the tombstone to no LLM message at
+  all — so the message leaves the model's context in the canonical way, using
+  the same mechanism the shipped compaction flow uses (60 replacement events
+  observed across real logs). The append-origin event stays in the log and on
+  the human transcript by design: that is the surface's documented contract,
+  not an omission. Undo (`/messages/unshadow`) truncates the log back to the
+  byte offset recorded in the shadow marker, and refuses when the log moved
+  on.
+- **Truncate (line B, backup-restorable).** `POST
+  /session-deleter/messages/truncate` removes every event after a chosen seq
+  by rebuilding the artifact from its surviving frame-aligned prefix. The
+  replaced tail is kept as a `.bak-<stamp>` backup; restore
+  (`/messages/untruncate`) is a byte-exact replacement that consumes the
+  backup, and is refused when the log grew since the cut. A truncation whose
+  surviving prefix would leave a replacement tombstone dangling without its
+  target is planned and refused before any write.
+- **Message listing.** `GET /session-deleter/messages?sessionId=…` returns
+  every surface-eligible message with live/shadowed/replacement status,
+  shadowed-by links, and a text preview — the dry run for both operations.
+- **Message manager overlay.** A new shell overlay lists the messages with
+  shadow/unshadow/truncate actions and a two-step truncate confirmation;
+  opened from the session picker's 「管理消息…」 entry. All new strings exist
+  in both dictionaries.
+- All message routes reuse the whole-session gates: the current session, a
+  live session, and traversal-shaped ids are refused before any filesystem
+  work, and every operation lands in the audit ledger.
+
+### Design notes
+
+- The tombstone is a `developer/message`, not the target's own type: a
+  `tool/result` replacement is restricted by the shipped validator to
+  content-only edits, so a tool result cannot shadow itself to nothing —
+  such shadow requests are refused with `not-shadowable`, and removing tool
+  results requires truncation, which removes their calls' whole tail.
+- The surface fold rules are replicated in `lib/shadow-fold.js` because the
+  plugin's ESM resolution cannot reach the profile's `@deepseek-ai/dsh-session`;
+  `tools/verify-shadow.mjs` cross-checks the replica against the real package
+  when it is resolvable, so drift is a test failure.
+
 ## 0.1.1
 
 Bug fixes for the management entry points, plus one pre-existing translation bug

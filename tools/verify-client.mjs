@@ -1,8 +1,8 @@
-// Verify the browser bundle loads and registers correctly, without a browser.
+﻿// Verify the browser bundle loads and registers correctly, without a browser.
 //
 // `lib/client.js` is a module-loader bundle, so loading it means: provide a
 // `window.__ModuleLoader__`, capture the factory, and call it with a `require`
-// that returns stand-ins. React is not needed as a real renderer here — the point
+// that returns stand-ins. React is not needed as a real renderer here 鈥?the point
 // is to prove the factory runs, the dictionaries register, all three slots are
 // claimed with the right ids and orders, and every component is a function.
 import { readFile } from 'node:fs/promises';
@@ -17,7 +17,7 @@ let failures = 0;
 const check = (label, condition, detail = '') => {
   const mark = condition ? 'PASS' : 'FAIL';
   if (!condition) failures++;
-  console.log(`  [${mark}] ${label}${detail ? ` — ${detail}` : ''}`);
+  console.log(`  [${mark}] ${label}${detail ? ` 鈥?${detail}` : ''}`);
 };
 
 // --- a minimal React stand-in ----------------------------------------------
@@ -72,7 +72,7 @@ globalThis.fetch = async () => ({ ok: true, text: async () => '{"ok":true}' });
 const source = await readFile(clientPath, 'utf8');
 
 // The bundle is an ordinary script that calls `window.__ModuleLoader__.load(...)`,
-// so it has to be *executed* against the stub window — reading the text would only
+// so it has to be *executed* against the stub window 鈥?reading the text would only
 // prove the file parses.
 const { runInNewContext } = await import('node:vm');
 const sandbox = {
@@ -97,7 +97,7 @@ const sandbox = {
 try {
   runInNewContext(source, sandbox, { filename: clientPath });
 } catch (error) {
-  console.log(`  [FAIL] bundle threw at script evaluation — ${error.message}`);
+  console.log(`  [FAIL] bundle threw at script evaluation 鈥?${error.message}`);
   process.exit(1);
 }
 
@@ -205,7 +205,7 @@ const overlays = byId('shell.overlay');
 // open its own settings panel from a third-party plugin, so the entries that
 // promise management render the same body in this overlay instead of doing
 // nothing (see trySelectSettingsPanel in lib/client.js).
-check('exactly three overlays registered (dialog + picker + manage)', overlays.length === 3, String(overlays.length));
+check('exactly four overlays registered (dialog + picker + manage + messages)', overlays.length === 4, String(overlays.length));
 check('the dialog overlay id is namespaced', overlays.some((o) => o.id === 'session-deleter.dialog'), overlays.map((o) => o.id).join(', '));
 check('the picker overlay id is namespaced', overlays.some((o) => o.id === 'session-deleter.picker'), overlays.map((o) => o.id).join(', '));
 check('the manage overlay id is namespaced', overlays.some((o) => o.id === 'session-deleter.manage'), overlays.map((o) => o.id).join(', '));
@@ -225,7 +225,7 @@ const keys = registrations.map((r) => `${r.name}#${r.id}`);
 check('all registration keys are distinct', new Set(keys).size === keys.length, keys.join(', '));
 // Six surfaces: menu row, dialog overlay, picker overlay, manage overlay,
 // footer entry, settings page.
-check('exactly six surfaces were registered', registrations.length === 6, String(registrations.length));
+check('exactly seven surfaces were registered', registrations.length === 7, String(registrations.length));
 
 console.log('\n=== 7. components are renderable functions ===');
 for (const record of registrations) {

@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-deleter",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Delete stored DSH sessions and subagents from the web UI: a recycle bin by default, permanent deletion only on explicit confirmation.",
   "keywords": [
     "deepseek",

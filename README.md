@@ -91,6 +91,25 @@ Served on the harness web server under `/session-deleter`:
 | POST | `/restore` | `{id}` → move back |
 | POST | `/purge` | `{id, confirm: true}` → remove bytes |
 | GET | `/ledger?limit=` | Append-only operation log |
+| GET | `/messages?sessionId=…` | Surface messages with live/shadowed status |
+| POST | `/messages/shadow` | `{sessionId, seq}` → tombstone one message (line A) |
+| POST | `/messages/unshadow` | `{sessionId, tombstoneSeq}` → undo one shadow |
+| POST | `/messages/truncate` | `{sessionId, throughSeq}` → drop the tail (line B) |
+| POST | `/messages/untruncate` | `{sessionId, backupPath}` → restore the backup |
+
+### Shadow vs truncate: what each one really does
+
+- **Shadow** is append-only and fully reversible. A `developer/message`
+  tombstone replaces one surface node in the model-visible fold — the same
+  mechanism the shipped compaction flow uses. The transcript keeps showing
+  the original row (by the surface's own documented contract), and the
+  tombstone derives to no LLM message. Deleting a message from the *model's
+  context* is what this does; deleting it from the *screen* requires
+  truncation.
+- **Truncate** removes events from the artifact by rebuilding it from the
+  surviving frame-aligned prefix. It takes the transcript rows with it and
+  keeps a `.bak-` backup for a byte-exact restore. It is the only message
+  operation that touches existing bytes.
 
 ## Configuration
 
