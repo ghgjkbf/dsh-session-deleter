@@ -13,6 +13,14 @@
   ],
   "type": "module",
   "main": "./lib/index.js",
+  "peerDependencies": {
+    "cordis": "*"
+  },
+  "peerDependenciesMeta": {
+    "cordis": {
+      "optional": true
+    }
+  },
   "exports": {
     ".": {
       "default": "./lib/index.js"
